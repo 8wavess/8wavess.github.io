@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8waves | Turning Sound Into Atmosphere</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Orbitron:wght@500;700;900&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* --- CSS VARIABLES & RESET (LIGHT THEME) --- */
+        :root {
+            --bg-color: #f4f4f8;
+            --bg-alt: #ffffff;
+            --primary: #9d00ff;
+            --secondary: #00d2ff;
+            --accent: #ff007f;
+            --text-main: #12121a;
+            --text-muted: #666677;
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(0, 0, 0, 0.08);
+            --glow-purple: 0 10px 30px rgba(157, 0, 255, 0.2);
+            --glow-blue: 0 10px 30px rgba(0, 210, 255, 0.2);
+            --font-heading: 'Orbitron', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-display: 'Syncopate', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            overflow-x: hidden;
+            cursor: none; 
+            scroll-behavior: smooth;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-color); }
+        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+
+        /* --- GLOBAL BACKGROUND EFFECTS --- */
+        .watermark-bg {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; z-index: -3; display: flex; flex-wrap: wrap;
+            align-content: center; justify-content: center; overflow: hidden;
+            opacity: 0.03; font-family: var(--font-display); font-size: 15vw;
+            font-weight: 900; line-height: 1; color: #000; user-select: none;
+        }
+        
+        #particle-canvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: -2;
+        }
+
+        .bg-orbs {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; z-index: -1; overflow: hidden;
+        }
+        .orb {
+            position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.4;
+            animation: floatOrb 20s infinite alternate ease-in-out;
+        }
+        .orb-1 { width: 500px; height: 500px; background: var(--primary); top: -10%; left: -10%; }
+        .orb-2 { width: 400px; height: 400px; background: var(--secondary); bottom: -10%; right: -10%; animation-delay: -5s; }
+        .orb-3 { width: 600px; height: 600px; background: var(--accent); top: 40%; left: 40%; opacity: 0.2; animation-delay: -10s; }
+
+        @keyframes floatOrb {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(100px, 100px) scale(1.2); }
+        }
+
+        /* --- CUSTOM CURSOR --- */
+        .cursor-dot {
+            position: fixed; top: 0; left: 0; width: 6px; height: 6px;
+            background: var(--primary); border-radius: 50%; pointer-events: none;
+            z-index: 99999; transform: translate(-50%, -50%); transition: transform 0.1s ease;
+        }
+        .cursor-outline {
+            position: fixed; top: 0; left: 0; width: 40px; height: 40px;
+            border: 1px solid var(--primary); box-shadow: var(--glow-purple);
+            border-radius: 50%; pointer-events: none; z-index: 99998;
+            transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s, border-color 0.2s;
+        }
+        .cursor-hover .cursor-outline { width: 60px; height: 60px; border-color: var(--accent); box-shadow: 0 0 20px rgba(255,0,127,0.3); }
+
+        /* --- LOADER --- */
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color); z-index: 100000; display: flex;
+            justify-content: center; align-items: center; flex-direction: column;
+            transition: opacity 1s ease, visibility 1s;
+        }
+        .loader-logo { font-family: var(--font-display); font-size: 3rem; font-weight: 700; color: var(--text-main); animation: pulseText 1.5s infinite alternate; }
+        .loader-bar { width: 200px; height: 2px; background: var(--glass-border); margin-top: 20px; position: relative; overflow: hidden; }
+        .loader-progress { position: absolute; top: 0; left: 0; height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); width: 0%; animation: loadBar 2s ease forwards; }
+        
+        @keyframes loadBar { 100% { width: 100%; } }
+        @keyframes pulseText { 0% { text-shadow: 0 0 10px rgba(157, 0, 255, 0.2); } 100% { text-shadow: 0 0 20px rgba(255, 0, 127, 0.5); } }
+
+        /* --- NAVBAR --- */
+        nav {
+            position: fixed; top: 0; width: 100%; padding: 20px 50px; z-index: 1000;
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(15px); border-bottom: 1px solid var(--glass-border);
+            transition: padding 0.3s, background 0.3s;
+        }
+        .logo { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; text-decoration: none; color: var(--text-main); letter-spacing: 2px; }
+        .nav-links { display: flex; gap: 20px; }
+        .nav-links a {
+            color: var(--text-main); text-decoration: none; font-size: 0.85rem; font-family: var(--font-heading);
+            text-transform: uppercase; position: relative; padding-bottom: 5px; font-weight: 600;
+        }
+        .nav-links a::after {
+            content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width 0.3s ease;
+        }
+        .nav-links a:hover::after { width: 100%; }
+        .menu-toggle { display: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer; }
+
+        /* --- REUSABLE COMPONENTS --- */
+        .container { max-width: 1400px; margin: 0 auto; padding: 100px 20px; }
+        .section-title {
+            font-family: var(--font-display); font-size: 3rem; text-align: center; margin-bottom: 60px;
+            background: linear-gradient(to right, var(--text-main), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            position: relative;
+        }
+        .section-title::after {
+            content: ''; display: block; width: 100px; height: 4px; margin: 15px auto 0;
+            background: linear-gradient(90deg, var(--primary), var(--secondary)); border-radius: 2px;
+        }
+        .btn {
+            padding: 12px 30px; border: none; border-radius: 30px; font-family: var(--font-heading);
+            text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; cursor: pointer;
+            transition: all 0.3s; text-decoration: none; display: inline-block; position: relative; overflow: hidden; font-weight: 700;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, var(--primary), var(--accent)); color: white;
+            box-shadow: 0 5px 15px rgba(255, 0, 127, 0.3); border: 1px solid transparent;
+        }
+        .btn-primary:hover { box-shadow: 0 10px 25px rgba(255, 0, 127, 0.5); transform: translateY(-2px); }
+        .btn-glass { background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--glass-border); backdrop-filter: blur(5px); }
+        .btn-glass:hover { background: white; border-color: var(--secondary); box-shadow: var(--glow-blue); transform: translateY(-2px); }
+
+        .reveal { opacity: 0; transform: translateY(50px); transition: all 1s cubic-bezier(0.25, 1, 0.5, 1); }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+        
+        /* --- HERO SECTION --- */
+        #hero {
+            height: 100vh; display: flex; align-items: center; justify-content: center;
+            position: relative; overflow: hidden; text-align: center;
+        }
+        .hero-content { z-index: 10; padding: 0 20px; }
+        .hero-title {
+            font-family: var(--font-display); font-size: 8vw; font-weight: 900; line-height: 1;
+            margin-bottom: 20px; background: linear-gradient(to right, var(--text-main), var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 10px 20px rgba(157,0,255,0.2));
+        }
+        .hero-subtitle { font-size: 1.5rem; color: var(--text-muted); font-weight: 400; margin-bottom: 40px; letter-spacing: 2px; }
+        .hero-btns { display: flex; gap: 20px; justify-content: center; }
+        
+        .visualizer { display: flex; justify-content: center; align-items: flex-end; gap: 5px; height: 60px; margin-top: 50px; }
+        .bar { width: 6px; background: linear-gradient(to top, var(--primary), var(--secondary)); border-radius: 3px; animation: eq 1s ease-in-out infinite alternate; box-shadow: var(--glow-blue); }
+        .bar:nth-child(1) { animation-duration: 0.7s; } .bar:nth-child(2) { animation-duration: 0.9s; }
+        .bar:nth-child(3) { animation-duration: 0.5s; } .bar:nth-child(4) { animation-duration: 0.8s; }
+        .bar:nth-child(5) { animation-duration: 1.1s; } .bar:nth-child(6) { animation-duration: 0.6s; }
+        .bar:nth-child(7) { animation-duration: 1s; }
+        @keyframes eq { 0% { height: 10px; } 100% { height: 60px; } }
+
+        .parallax-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .note { position: absolute; color: rgba(0,0,0,0.05); font-size: 3rem; filter: blur(1px); }
+
+        /* --- ABOUT US --- */
+        .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; align-items: center; }
+        .about-text h3 { font-family: var(--font-heading); font-size: 2rem; color: var(--primary); margin-bottom: 20px; }
+        .about-text p { color: var(--text-muted); line-height: 1.8; margin-bottom: 20px; font-size: 1.1rem; }
+        .genre-tags { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+        .genre-tag { background: white; border: 1px solid var(--glass-border); padding: 8px 15px; border-radius: 20px; font-size: 0.9rem; font-family: var(--font-heading); color: var(--text-main); font-weight: 600; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .about-visual { position: relative; height: 400px; display: flex; justify-content: center; align-items: center; perspective: 1000px; }
+        .disc { width: 300px; height: 300px; border-radius: 50%; background: conic-gradient(from 0deg, #e0e0e0, var(--primary), var(--secondary), #e0e0e0); box-shadow: var(--glow-purple); animation: spinDisc 10s linear infinite; display: flex; justify-content: center; align-items: center; transform-style: preserve-3d; transform: rotateX(20deg); }
+        .disc::after { content: ''; width: 280px; height: 280px; background: white; border-radius: 50%; position: absolute; }
+        .disc-center { width: 80px; height: 80px; background: url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop') center/cover; border-radius: 50%; z-index: 2; border: 3px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        @keyframes spinDisc { 100% { transform: rotateX(20deg) rotateZ(360deg); } }
+
+        /* --- RELEASES (HORIZONTAL SCROLLING) --- */
+        .release-grid { 
+            display: flex; 
+            flex-wrap: nowrap;
+            overflow-x: auto; 
+            gap: 30px; 
+            margin-bottom: 40px; 
+            padding-bottom: 20px;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+        .release-grid::-webkit-scrollbar { height: 8px; }
+        .release-grid::-webkit-scrollbar-track { background: var(--glass-border); border-radius: 10px; }
+        .release-grid::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+        
+        .release-card { position: relative; overflow: hidden; border-radius: 15px; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.05); transition: transform 0.3s, box-shadow 0.3s; cursor: pointer; border: 1px solid var(--glass-border); display: block; }
+        .release-grid .release-card { flex: 0 0 auto; width: 300px; scroll-snap-align: start; }
+        
+        .release-card:hover { transform: translateY(-10px); box-shadow: var(--glow-purple); border-color: var(--primary); }
+        .release-art { width: 100%; height: 300px; object-fit: cover; transition: transform 0.5s ease; }
+        .release-card:hover .release-art { transform: scale(1.05); }
+        .release-info { position: absolute; bottom: 0; left: 0; width: 100%; padding: 25px 20px 20px; background: linear-gradient(to top, rgba(255,255,255,1) 40%, rgba(255,255,255,0)); transform: translateY(10px); transition: transform 0.3s; }
+        .release-card:hover .release-info { transform: translateY(0); }
+        .release-title { font-family: var(--font-heading); font-size: 1.5rem; margin-bottom: 5px; color: var(--text-main); font-weight: 700; }
+        .release-genre { color: var(--primary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+        .play-btn-overlay { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5); opacity: 0; width: 70px; height: 70px; background: rgba(255,255,255,0.9); backdrop-filter: blur(5px); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; color: var(--primary); box-shadow: 0 10px 20px rgba(0,0,0,0.1); transition: all 0.3s; z-index: 2; }
+        .release-card:hover .play-btn-overlay { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        .text-center { text-align: center; margin-top: 20px; }
+
+        /* --- UPCOMING FILTER TABS --- */
+        .filter-container { display: flex; justify-content: center; gap: 15px; margin-bottom: 40px; flex-wrap: wrap; }
+        .filter-btn { padding: 10px 25px; border-radius: 30px; border: 1px solid var(--glass-border); background: var(--glass-bg); font-family: var(--font-heading); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .filter-btn.active, .filter-btn:hover { background: var(--primary); color: white; border-color: var(--primary); box-shadow: var(--glow-purple); }
+
+        /* --- STATS --- */
+        #stats { background: white; border-top: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border); padding: 60px 0; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: center; }
+        .stat-num { font-family: var(--font-display); font-size: 4rem; font-weight: 700; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 5px 10px rgba(0,210,255,0.2)); }
+        .stat-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem; margin-top: 10px; font-weight: 600; }
+
+        /* --- TEAM --- */
+        .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 40px; perspective: 1000px; }
+        .team-card { height: 350px; position: relative; border-radius: 15px; overflow: hidden; transform-style: preserve-3d; transition: transform 0.1s ease; box-shadow: 0 15px 35px rgba(0,0,0,0.1); background: white; border: 1px solid var(--glass-border); }
+        .team-card::before { content: ''; position: absolute; inset: 0; border: 2px solid transparent; background: linear-gradient(45deg, var(--primary), var(--secondary)) border-box; -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; border-radius: 15px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 3; }
+        .team-card:hover::before { opacity: 1; }
+        .team-img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(50%); transition: filter 0.5s; }
+        .team-card:hover .team-img { filter: grayscale(0%); }
+        .team-info { position: absolute; bottom: 0; width: 100%; padding: 30px 20px 20px; background: linear-gradient(to top, rgba(255,255,255,1) 40%, transparent); transform: translateZ(30px); }
+        .team-name { font-family: var(--font-heading); font-size: 1.2rem; margin-bottom: 5px; font-weight: 700; color: var(--text-main); }
+        .team-role { color: var(--primary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+        .team-socials { display: flex; gap: 10px; margin-top: 10px; opacity: 0; transform: translateY(10px); transition: all 0.3s; }
+        .team-card:hover .team-socials { opacity: 1; transform: translateY(0); }
+        .team-socials a { color: var(--text-main); transition: color 0.3s; background: rgba(0,0,0,0.05); width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .team-socials a:hover { color: white; background: var(--accent); }
+
+        /* --- SPONSORS --- */
+        .sponsor-marquee { width: 100%; overflow: hidden; padding: 40px 0; background: var(--bg-color); border-bottom: 1px solid var(--glass-border); position: relative; }
+        .sponsor-track { display: flex; width: calc(200px * 14); animation: scrollMarquee 20s linear infinite; }
+        .sponsor-logo { width: 200px; height: 80px; display: flex; justify-content: center; align-items: center; font-family: var(--font-heading); font-size: 1.5rem; color: #ccc; transition: all 0.3s; user-select: none; font-weight: 700; }
+        .sponsor-logo:hover { color: var(--text-main); transform: scale(1.1); }
+        @keyframes scrollMarquee { 0% { transform: translateX(0); } 100% { transform: translateX(calc(-200px * 7)); } }
+
+        /* --- CONTACT --- */
+        .contact-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; background: white; border-radius: 20px; overflow: hidden; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.05); border: 1px solid var(--glass-border); }
+        .contact-wrapper::before { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 50%; background: url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop') center/cover no-repeat; opacity: 0.8; }
+        .contact-info { position: relative; z-index: 2; padding: 60px; }
+        .contact-form { position: relative; z-index: 2; padding: 60px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); }
+        .contact-info h3 { font-family: var(--font-heading); font-size: 2.5rem; margin-bottom: 20px; color: var(--text-main); }
+        .contact-info p { color: var(--text-muted); margin-bottom: 40px; line-height: 1.6; }
+        .social-links { display: flex; gap: 15px; }
+        .social-link { width: 45px; height: 45px; border-radius: 50%; background: var(--bg-color); display: flex; justify-content: center; align-items: center; color: var(--text-main); text-decoration: none; border: 1px solid var(--glass-border); transition: all 0.3s; font-size: 1.2rem; }
+        .social-link:hover { background: var(--primary); color: white; box-shadow: var(--glow-purple); transform: translateY(-5px); }
+        
+        /* --- FOOTER --- */
+        footer { padding: 80px 20px 20px; position: relative; overflow: hidden; text-align: center; border-top: 1px solid var(--glass-border); background: white; }
+        .footer-bg-text { position: absolute; bottom: -2vw; left: 50%; transform: translateX(-50%); font-family: var(--font-display); font-size: 15vw; font-weight: 900; color: rgba(0,0,0,0.02); white-space: nowrap; pointer-events: none; z-index: 0; }
+        .footer-content { position: relative; z-index: 1; }
+        .footer-logo { font-family: var(--font-display); font-size: 2rem; margin-bottom: 20px; display: inline-block; color: var(--text-main); }
+        .footer-links { margin-bottom: 30px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+        .footer-links a { color: var(--text-muted); text-decoration: none; transition: color 0.3s; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 1px; font-weight: 600; }
+        .footer-links a:hover { color: var(--primary); }
+        .copyright { color: var(--text-muted); font-size: 0.8rem; margin-top: 40px; border-top: 1px solid var(--glass-border); padding-top: 20px; }
+
+        /* --- NOW PLAYING WIDGET --- */
+        .now-playing { position: fixed; bottom: 30px; right: 30px; background: white; backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 50px; padding: 10px 20px; display: flex; align-items: center; gap: 15px; z-index: 999; box-shadow: 0 10px 25px rgba(0,0,0,0.1); transition: transform 0.3s; cursor: pointer; }
+        .now-playing:hover { transform: scale(1.05); border-color: var(--primary); }
+        .np-disc { width: 40px; height: 40px; border-radius: 50%; background: url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=100&auto=format&fit=crop') center/cover; animation: spinDisc 4s linear infinite; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .np-info { display: flex; flex-direction: column; }
+        .np-title { font-size: 0.9rem; font-weight: 700; color: var(--text-main); }
+        .np-artist { font-size: 0.7rem; color: var(--text-muted); }
+        .live-badge { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: var(--accent); margin-top: 2px; font-weight: 600; }
+        .live-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: blink 1s infinite alternate; }
+        @keyframes blink { 0% { opacity: 0.3; } 100% { opacity: 1; box-shadow: 0 0 5px var(--accent); } }
+
+        /* --- MEDIA METADATA & LIKES UI --- */
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* --- DYNAMIC AUDIO PLAYER MODAL (SPOTIFY STYLE) --- */
+        .audio-modal {
+            display: none; position: fixed; z-index: 10001; left: 0; top: 0; width: 100vw; height: 100vh;
+            background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(15px);
+            opacity: 0; transition: opacity 0.3s ease; justify-content: center; align-items: center;
+        }
+        .audio-modal.show { display: flex; opacity: 1; }
+        .audio-modal-content {
+            position: relative; width: 90%; max-width: 400px; background: #fff;
+            border: 1px solid var(--primary); box-shadow: var(--glow-purple);
+            border-radius: 20px; padding: 30px; text-align: center;
+            transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .audio-modal.show .audio-modal-content { transform: scale(1); }
+        .close-audio-modal {
+            position: absolute; top: 15px; right: 20px; color: var(--text-main); font-size: 2rem;
+            cursor: pointer; z-index: 10; transition: all 0.3s; line-height: 1;
+        }
+        .close-audio-modal:hover { color: var(--accent); transform: scale(1.2); }
+        .audio-cover { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .audio-modal-title { font-family: var(--font-heading); font-size: 1.5rem; color: var(--text-main); margin-bottom: 5px; }
+        .audio-modal-views { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px; }
+        #dynamic-audio-player { width: 100%; margin-bottom: 20px; outline: none; }
+        .audio-modal-actions { display: flex; justify-content: center; }
+        .audio-like-btn {
+            background: white; border: 1px solid var(--glass-border); color: var(--text-main);
+            padding: 10px 20px; border-radius: 30px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+            font-family: var(--font-heading); font-weight: 600; transition: all 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .audio-like-btn:hover { border-color: var(--primary); box-shadow: var(--glow-purple); }
+        .audio-like-btn.liked { color: var(--accent); border-color: var(--accent); animation: pop 0.4s ease; background: rgba(255,0,127,0.05); }
+
+        /* --- ALL RELEASES MODALS (FULL SCREEN) --- */
+        .library-modal {
+            display: none; position: fixed; z-index: 5000; left: 0; top: 0; width: 100vw; height: 100vh;
+            background-color: var(--bg-color); overflow-y: auto; overflow-x: hidden;
+            opacity: 0; transform: translateY(50px); transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .library-modal.show { display: block; opacity: 1; transform: translateY(0); }
+        .lib-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 30px 50px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px);
+            position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--glass-border);
+        }
+        .lib-title { font-family: var(--font-display); font-size: 2rem; color: var(--text-main); }
+        .close-lib { font-size: 2.5rem; cursor: pointer; color: var(--text-main); transition: color 0.3s; line-height: 1; }
+        .close-lib:hover { color: var(--accent); }
+        
+        /* Search Bar & Filter */
+        .search-container { padding: 30px 50px 10px; display: flex; gap: 15px; flex-wrap: wrap; }
+        .search-input {
+            flex: 1; min-width: 200px; padding: 15px 25px; border-radius: 30px;
+            background: white; border: 1px solid var(--glass-border);
+            font-family: var(--font-body); font-size: 1rem; color: var(--text-main);
+            outline: none; transition: all 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.02);
+        }
+        .search-input:focus { border-color: var(--primary); box-shadow: var(--glow-purple); }
+        
+        .filter-select {
+            padding: 0 20px; border-radius: 30px; background: white; border: 1px solid var(--glass-border);
+            font-family: var(--font-heading); font-size: 0.85rem; color: var(--text-main); outline: none;
+            cursor: pointer; transition: all 0.3s; min-width: 150px;
+        }
+        .filter-select:hover, .filter-select:focus { border-color: var(--primary); box-shadow: var(--glow-purple); }
+
+        .lib-grid { padding: 20px 50px 50px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 40px; }
+
+        /* --- MEDIA QUERIES --- */
+        @media (max-width: 992px) {
+            .about-grid, .contact-wrapper { grid-template-columns: 1fr; }
+            .contact-wrapper::before { display: none; }
+            .contact-info, .contact-form { padding: 40px; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 768px) {
+            .nav-links { display: none; position: absolute; top: 100%; left: 0; width: 100%; background: rgba(255,255,255,0.95); flex-direction: column; text-align: center; padding: 20px 0; border-bottom: 1px solid var(--primary); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+            .nav-links.active { display: flex; }
+            .menu-toggle { display: block; }
+            .hero-title { font-size: 12vw; }
+            .now-playing { bottom: 20px; right: 20px; padding: 8px 15px; }
+            .lib-header, .search-container { padding: 20px; }
+            .lib-grid { padding: 20px; gap: 20px; }
+        }
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .hero-btns { flex-direction: column; }
+        }
+
+        /* ========================================= */
+        /* --- ADVANCED PREMIUM ARTISTS UI CSS --- */
+        /* ========================================= */
+
+        /* Dark Neon Cinematic Theme for Artists Modal */
+        #artists-modal {
+            background-color: #050508; 
+            color: #ffffff;
+        }
+        #artists-modal .lib-header {
+            background: rgba(5, 5, 8, 0.8);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        #artists-modal .lib-title { color: #fff; }
+        #artists-modal .close-lib { color: #fff; }
+        
+        #artists-modal .search-input, #artists-modal .filter-select {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            backdrop-filter: blur(10px);
+        }
+        #artists-modal .search-input:focus, #artists-modal .filter-select:hover {
+            border-color: var(--secondary);
+            box-shadow: var(--glow-blue);
+        }
+
+        /* Artist Grid Cards */
+        .artist-card-pro {
+            position: relative; overflow: hidden; border-radius: 20px;
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px); text-align: center; padding: 40px 20px;
+            transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1); cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .artist-card-pro:hover {
+            transform: translateY(-10px); border-color: var(--primary);
+            box-shadow: var(--glow-purple), 0 20px 40px rgba(0,0,0,0.8);
+            background: rgba(255,255,255,0.05);
+        }
+        .artist-img-circle {
+            width: 140px; height: 140px; border-radius: 50%; object-fit: cover;
+            margin: 0 auto 20px; border: 3px solid transparent;
+            background: linear-gradient(#050508, #050508) padding-box, linear-gradient(45deg, var(--primary), var(--secondary)) border-box;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5); transition: transform 0.4s;
+        }
+        .artist-card-pro:hover .artist-img-circle { transform: scale(1.05); }
+        .artist-name-pro { font-family: var(--font-heading); font-size: 1.4rem; font-weight: 700; color: #fff; margin-bottom: 5px; }
+        .verified-badge { color: var(--secondary); font-size: 0.9rem; margin-left: 5px; filter: drop-shadow(0 0 5px var(--secondary)); }
+        .artist-role-pro { color: var(--accent); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 15px; }
+        .artist-stats-pro { font-size: 0.8rem; color: rgba(255,255,255,0.5); font-family: var(--font-body); }
+
+        /* Detail View Banner */
+        .artist-detail-view { display: none; padding: 0 0 50px; opacity: 0; transition: opacity 0.4s; }
+        .artist-detail-view.show { display: block; opacity: 1; }
+        
+        .artist-banner {
+            position: relative; width: 100%; height: 40vh; min-height: 350px;
+            display: flex; align-items: flex-end; padding: 50px;
+            background-size: cover; background-position: center;
+        }
+        .artist-banner::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(to top, #050508 5%, transparent 60%, rgba(0,0,0,0.5) 100%);
+        }
+        .banner-back-btn {
+            position: absolute; top: 30px; left: 50px; background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 45px; height: 45px;
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            font-size: 1.2rem; cursor: pointer; transition: all 0.3s; z-index: 10; backdrop-filter: blur(5px);
+        }
+        .banner-back-btn:hover { background: var(--primary); border-color: var(--primary); transform: translateX(-5px); }
+        
+        .artist-banner-content { position: relative; z-index: 10; display: flex; align-items: center; gap: 40px; width: 100%; }
+        .artist-banner-img {
+            width: 200px; height: 200px; border-radius: 50%; object-fit: cover;
+            border: 4px solid #fff; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        .artist-banner-info h1 {
+            font-family: var(--font-display); font-size: 4.5rem; line-height: 1; margin-bottom: 10px;
+            text-shadow: 0 10px 20px rgba(0,0,0,0.8);
+        }
+        .artist-banner-meta { display: flex; gap: 20px; font-size: 1rem; color: rgba(255,255,255,0.8); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        .verified-large { color: var(--secondary); margin-right: 5px; }
+        
+        .artist-body { padding: 40px 50px; max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr; gap: 50px; }
+        .artist-section-title { font-family: var(--font-heading); font-size: 1.5rem; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        .artist-bio { color: rgba(255,255,255,0.7); line-height: 1.8; font-size: 1.05rem; margin-bottom: 30px; }
+        .artist-social-links { display: flex; gap: 15px; }
+        .artist-social-links a {
+            width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.05);
+            display: flex; justify-content: center; align-items: center; color: #fff; font-size: 1.3rem;
+            transition: all 0.3s; border: 1px solid rgba(255,255,255,0.1); text-decoration: none;
+        }
+        .artist-social-links a:hover { background: var(--primary); box-shadow: var(--glow-purple); transform: translateY(-5px); }
+
+        /* --- Mini "Now Playing Contributors" UI inside Audio Modal --- */
+        .now-playing-contributors {
+            display: none; position: absolute; bottom: 85px; left: 5%; width: 90%;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px);
+            border-radius: 15px; padding: 20px; border: 1px solid var(--primary);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2), var(--glow-purple); text-align: left; z-index: 50;
+            animation: revealUp 0.3s ease forwards;
+        }
+        @keyframes revealUp { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+        
+        .npc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .npc-title { font-family: var(--font-heading); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: var(--primary); font-weight: 700; margin-bottom: 0; }
+        .close-npc { color: var(--text-muted); cursor: pointer; font-size: 1.2rem; transition: color 0.3s; }
+        .close-npc:hover { color: var(--accent); }
+        .npc-list { display: flex; flex-direction: column; gap: 10px; max-height: 200px; overflow-y: auto; padding-right: 5px; }
+        .npc-list::-webkit-scrollbar { width: 4px; }
+        .npc-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
+        .npc-list::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+        .npc-item { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--text-main); font-weight: 500; }
+        .npc-item i { color: var(--accent); width: 16px; text-align: center; }
+        .npc-role { color: var(--text-muted); font-size: 0.75rem; width: 90px; }
+
+        @media (max-width: 768px) {
+            .artist-banner { padding: 30px 20px; flex-direction: column; align-items: center; text-align: center; height: auto; padding-top: 80px; }
+            .artist-banner-content { flex-direction: column; gap: 20px; }
+            .banner-back-btn { top: 20px; left: 20px; }
+            .artist-banner-img { width: 150px; height: 150px; }
+            .artist-banner-info h1 { font-size: 2.5rem; }
+            .artist-banner-meta { justify-content: center; font-size: 0.8rem; flex-wrap: wrap; }
+            .artist-body { grid-template-columns: 1fr; padding: 30px 20px; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loader">
+        <div class="loader-logo">8waves</div>
+        <div class="loader-bar"><div class="loader-progress"></div></div>
+    </div>
+
+    <!-- Custom Cursor -->
+    <div class="cursor-dot" id="cursor-dot"></div>
+    <div class="cursor-outline" id="cursor-outline"></div>
+
+    <!-- Background Elements -->
+    <div class="watermark-bg">
+        8WAVES 8WAVES 8WAVES 8WAVES 8WAVES 8WAVES 8WAVES 8WAVES 8WAVES 8WAVES
+    </div>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- Dynamic Audio Player Modal -->
+    <div id="audio-modal" class="audio-modal">
+        <div class="audio-modal-content hover-target">
+            <span class="close-audio-modal hover-target" id="close-audio-btn">&times;</span>
+            <img id="audio-modal-cover" src="" alt="Album Cover" class="audio-cover">
+            <h3 id="audio-modal-title" class="audio-modal-title">Track Title</h3>
+            <div class="audio-modal-views"><span id="audio-modal-views">0</span> Streams</div>
+            
+            <audio id="dynamic-audio-player" controls>
+                <source src="" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+
+            <div class="audio-modal-actions">
+                <button id="audio-like-btn" class="audio-like-btn hover-target">
+                    <i class="fas fa-heart"></i> <span id="audio-modal-likes">0</span>
+                </button>
+                <!-- BUTTON: OPENS TRACK ARTISTS -->
+                <button id="open-track-artists-btn" class="audio-like-btn hover-target" style="margin-left: 10px; border-color: var(--secondary);">
+                    <i class="fas fa-users"></i> <span style="margin-left: 5px;">Artists</span>
+                </button>
+            </div>
+
+            <!-- ADVANCED FEATURE: Mini Now Playing Contributors -->
+            <div id="now-playing-contributors" class="now-playing-contributors">
+                <div class="npc-header">
+                    <div class="npc-title">Track Artists</div>
+                    <i class="fas fa-times close-npc hover-target" id="close-npc-btn"></i>
+                </div>
+                <div class="npc-list" id="npc-list-container">
+                    <!-- dynamically injected contributors -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Audio Releases Modal -->
+    <div id="all-audio-modal" class="library-modal">
+        <div class="lib-header">
+            <div class="lib-title">Audio Library</div>
+            <span class="close-lib hover-target" id="close-audio-lib-btn">&times;</span>
+        </div>
+        <div class="search-container">
+            <input type="text" id="audio-search-input" class="search-input hover-target" placeholder="Search audio releases by title...">
+            <select id="audio-lang-filter" class="filter-select hover-target">
+                <option value="all">All Languages</option>
+                <option value="English">English</option>
+                <option value="Hindi">Hindi</option>
+                <option value="Instrumental">Instrumental</option>
+            </select>
+        </div>
+        <div class="lib-grid" id="audio-lib-grid">
+            <div class="release-card hover-target audio-play-trigger" data-lang="Hindi" data-audio="khamosh Raatein 1.mp3" data-title="Khamosh Raatein" data-views="1.1k" data-likes="935" data-cover="Khamosh Ratein 1.png">
+                <img src="Khamosh Ratein 1.png" class="release-art">
+                <div class="play-btn-overlay"><i class="fas fa-music"></i></div>
+                <div class="release-info"><div class="release-title">Khamosh Raatein</div><div class="release-genre">Romantic</div></div>
+            </div>
+
+            <div class="release-card hover-target audio-play-trigger" data-lang="Hindi" data-audio="Tum aur Mein.mp3" data-title="Tum Aur Mein" data-views="2.45k" data-likes="1322" data-cover="Tum aur Mein.png">
+                <img src="Tum aur Mein.png" class="release-art">
+                <div class="play-btn-overlay"><i class="fas fa-music"></i></div>
+                <div class="release-info"><div class="release-title">Tum Aur Mein</div><div class="release-genre">Romantic</div></div>
+            </div>
+            
+            <div class="release-card hover-target audio-play-trigger" data-lang="Hindi" data-audio="Dono Taraf Se Sach Mohabbat.mp3" data-title="Dono Taraf Se Sach Mohabbat" data-views="4.7k" data-likes="2,231" data-cover="Dono Taraf Se Sach Mohabbat.png">
+                <img src="Dono Taraf Se Sach Mohabbat.png" class="release-art">
+                <div class="play-btn-overlay"><i class="fas fa-music"></i></div>
+                <div class="release-info"><div class="release-title">Dono Taraf Se Sach Mohabbat</div><div class="release-genre">Romantic</div></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- NEW: PREMIUM ARTISTS DISCOVERY PAGE MODAL -->
+    <!-- ========================================= -->
+    <div id="artists-modal" class="library-modal dark-neon-theme">
+        
+        <!-- Main Artist Grid View -->
+        <div id="artist-grid-view">
+            <div class="lib-header">
+                <div class="lib-title">Main Artist Roster</div>
+                <span class="close-lib hover-target" id="close-artists-btn">&times;</span>
+            </div>
+            <div class="search-container">
+                <input type="text" id="artist-search-input" class="search-input hover-target" placeholder="Search artists, producers, editors...">
+                <select id="artist-role-filter" class="filter-select hover-target">
+                    <option value="all">All Roles</option>
+                    <option value="Main Artist">Main Artist</option>
+                    <option value="Producer">Producer</option>
+                    <option value="Lofi Editor">Lofi Editor</option>
+                    <option value="Visual Designer">Visual Designer</option>
+                    <option value="Lyric Creator">Lyric Creator</option>
+                </select>
+            </div>
+            <div class="lib-grid" id="artists-lib-grid">
+                <!-- Artists dynamically injected here -->
+            </div>
+        </div>
+
+        <!-- Detailed Artist Banner View -->
+        <div id="artist-detail-view" class="artist-detail-view">
+            <div class="artist-banner" id="ad-banner-bg" style="background-image: url('https://images.unsplash.com/photo-1520813792240-56fc4a3765a7?q=80&w=1600&auto=format&fit=crop');">
+                <div class="banner-back-btn hover-target" id="artist-back-btn"><i class="fas fa-arrow-left"></i></div>
+                <div class="artist-banner-content">
+                    <img id="ad-image" src="" alt="Artist" class="artist-banner-img">
+                    <div class="artist-banner-info">
+                        <h1 id="ad-name">Artist Name</h1>
+                        <div class="artist-banner-meta">
+                            <span id="ad-verified"><i class="fas fa-check-circle verified-large"></i> Verified Artist</span>
+                            <span><span id="ad-listeners">0</span> Monthly Listeners</span>
+                            <span style="color: var(--primary);" id="ad-role">Role</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="artist-body">
+                <div>
+                    <h3 class="artist-section-title">Biography</h3>
+                    <p class="artist-bio" id="ad-bio">Artist biography goes here...</p>
+                    <h3 class="artist-section-title">Top Contributions</h3>
+                    <div class="npc-list" id="ad-top-tracks" style="margin-bottom: 30px;">
+                        <!-- Top tracks injected here -->
+                    </div>
+                </div>
+                <div>
+                    <h3 class="artist-section-title">Connect</h3>
+                    <div class="artist-social-links" id="ad-socials">
+                        <!-- Socials injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Now Playing Widget -->
+    <div class="now-playing hover-target">
+        <div class="np-disc"></div>
+        <div class="np-info">
+            <span class="np-title">Neon Nights (Live)</span>
+            <span class="np-artist">8waves Radio</span>
+            <div class="live-badge">
+                <div class="live-dot"></div>
+                <span id="live-listeners">1,432</span> Listening
+            </div>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <nav id="navbar">
+        <a href="#" class="logo hover-target">8waves</a>
+        <div class="menu-toggle hover-target" id="mobile-menu"><i class="fas fa-bars"></i></div>
+        <div class="nav-links" id="nav-links">
+            <a href="#hero" class="hover-target">Home</a>
+            <a href="#about" class="hover-target">About</a>
+            <a href="#audio-releases" class="hover-target">Audio</a>
+            <a href="#upcoming-releases" class="hover-target">Upcoming</a>
+            <!-- NEW NAV BUTTON ADDED HERE -->
+            <a href="#" id="open-artists-btn" class="hover-target">Artists</a>
+            <a href="#team" class="hover-target">Team</a>
+            <a href="#contact" class="hover-target">Contact</a>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Hero Section -->
+        <section id="hero">
+            <div class="parallax-layer" id="parallax-bg">
+                <i class="fas fa-music note" style="top: 20%; left: 15%;"></i>
+                <i class="fas fa-compact-disc note" style="top: 70%; left: 80%; font-size: 4rem;"></i>
+                <i class="fas fa-wave-square note" style="top: 40%; left: 85%;"></i>
+                <i class="fas fa-headphones note" style="top: 80%; left: 20%; font-size: 3.5rem;"></i>
+            </div>
+            
+            <div class="hero-content reveal">
+                <h1 class="hero-title" id="parallax-title">8WAVES</h1>
+                <p class="hero-subtitle">Turning Sound Into Atmosphere</p>
+                <div class="hero-btns">
+                    <a href="#audio-releases" class="btn btn-primary hover-target">Listen Now</a>
+                </div>
+                
+                <div class="visualizer">
+                    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                    <div class="bar"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Us -->
+        <section id="about" class="container">
+            <h2 class="section-title reveal">The Frequency</h2>
+            <div class="about-grid">
+                <div class="about-visual reveal">
+                    <div class="disc">
+                        <div class="disc-center"></div>
+                    </div>
+                </div>
+                <div class="about-text reveal">
+                    <h3>Curating the Underground</h3>
+                    <p>8waves is an independent music production company creating original music through cinematic sound, emotion, and modern creativity.</p>
+                    <p>All songs, audio productions, visuals, lyrics, and creative content published under 8waves are original works and protected by copyright laws. Unauthorized copying, re-uploading, redistribution, reproduction, or commercial use of any content without official permission from 8waves is strictly prohibited.</p>
+                    <div class="genre-tags">
+                        <span class="genre-tag">Slowed + Reverb</span>
+                        <span class="genre-tag">Romantic</span>
+                        <span class="genre-tag">Lofi</span>
+                        <span class="genre-tag">and more...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Audio Releases -->
+        <section id="audio-releases" class="container">
+            <h2 class="section-title reveal">Audio Releases</h2>
+            <div class="release-grid">
+                <div class="release-card reveal hover-target audio-play-trigger" data-lang="Hindi" data-audio="Khamosh Raatein 1.mp3" data-title="Khamosh Raatein" data-views="1.1k" data-likes="935" data-cover="Khamosh Ratein 1.png" style="transition-delay: 0.1s;">
+                    <img src="Khamosh Ratein 1.png" alt="Cover" class="release-art">
+                    <div class="play-btn-overlay"><i class="fas fa-music"></i></div>
+                    <div class="release-info">
+                        <div class="release-title">Khamosh Raatein</div>
+                        <div class="release-genre">Romantic</div>
+                    </div>
+                </div>
+                
+                <div class="release-card reveal hover-target audio-play-trigger" data-lang="Hindi" data-audio="Tum aur Mein.mp3" data-title="Tum Aur Mein" data-views="2.45k" data-likes="1,322" data-cover="Tum aur Mein.png" style="transition-delay: 0.1s;">
+                    <img src="Tum aur Mein.png" alt="Cover" class="release-art">
+                    <div class="play-btn-overlay"><i class="fas fa-music"></i></div>
+                    <div class="release-info">
+                        <div class="release-title">Tum Aur Mein</div>
+                        <div class="release-genre">Romantic</div>
+                    </div>
+                </div>
+                
+                <div class="release-card reveal hover-target audio-play-trigger" data-lang="Instrumental" data-audio="Dono Taraf Se Sach Mohabbat.mp3" data-title="Dono Taraf Se Sach Mohabbat" data-views="4.7k" data-likes="2,231" data-cover="Dono Taraf Se Sach Mohabbat.png" style="transition-delay: 0.2s;">
+                    <img src="Dono Taraf Se Sach Mohabbat.png" alt="Cover" class="release-art">
+                    <div class="play-btn-overlay"><i class="fas fa-music"></i></div>
+                    <div class="release-info">
+                        <div class="release-title">Dono Taraf Se Sach Mohabbat</div>
+                        <div class="release-genre">Romantic</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center reveal">
+                <button id="open-audio-lib" class="btn btn-glass hover-target">View All Audio</button>
+            </div>
+        </section>
+
+        <!-- Upcoming Releases (Filtered) -->
+        <section id="upcoming-releases" class="container">
+            <h2 class="section-title reveal">Upcoming Drops</h2>
+            
+            <div class="release-grid" id="upcoming-grid">
+                <!-- Audio Upcoming -->
+                <div class="release-card upcoming-card reveal hover-target" data-type="audio" style="transition-delay: 0.1s;">
+                    <img src="Toot'ta Aasmaan.png" class="release-art">
+                    <div class="play-btn-overlay"><i class="fas fa-lock"></i></div>
+                    <div class="release-info">
+                        <div class="release-title">Toot'ta Aasmaan</div>
+                        <div class="release-genre">Releasing: 1st June 2026</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Section -->
+        <section id="stats">
+            <div class="container reveal" style="padding: 0;">
+                <div class="stats-grid">
+                    <div>
+                        <div class="stat-num" data-target="10432">0</div>
+                        <div class="stat-label">Streams</div>
+                    </div>
+                    <div>
+                        <div class="stat-num" data-target="3">0</div>
+                        <div class="stat-label">Releases</div>
+                    </div>
+                    <div>
+                        <div class="stat-num" data-target="400">0</div>
+                        <div class="stat-label">K+ Community</div>
+                    </div>
+                    <div>
+                        <div class="stat-num" data-target="4">0</div>
+                        <div class="stat-label">Countries</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Team -->
+        <section id="team" class="container">
+            <h2 class="section-title reveal">The Architects</h2>
+            <div class="team-grid">
+                <div class="team-card reveal hover-target tilt-card">
+                    <img src="Udit.png" class="team-img">
+                    <div class="team-info">
+                        <div class="team-name">Udit Goswami</div>
+                        <div class="team-role">Founder / Producer</div>
+                        <div class="team-socials">
+                            <a href="#"><i class="fab fa-instagram"></i></a>
+                            <a href="#"><i class="fab fa-twitter"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="team-card reveal hover-target tilt-card" style="transition-delay: 0.1s;">
+                    <img src="Profile.jpg" class="team-img">
+                    <div class="team-info">
+                        <div class="team-name">Arjun Mehta</div>
+                        <div class="team-role">Male Main Artist</div>
+                        <div class="team-socials">
+                            <a href="#"><i class="fab fa-soundcloud"></i></a>
+                            <a href="#"><i class="fab fa-instagram"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="team-card reveal hover-target tilt-card" style="transition-delay: 0.2s;">
+                    <img src="Profile.jpg" class="team-img">
+                    <div class="team-info">
+                        <div class="team-name">Navya Sharma</div>
+                        <div class="team-role">Female Main Artist</div>
+                        <div class="team-socials">
+                            <a href="#"><i class="fab fa-spotify"></i></a>
+                            <a href="#"><i class="fab fa-youtube"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="team-card reveal hover-target tilt-card" style="transition-delay: 0.3s;">
+                    <img src="Elena.png" class="team-img">
+                    <div class="team-info">
+                        <div class="team-name">Elena</div>
+                        <div class="team-role">Visual / 3D Artist</div>
+                        <div class="team-socials">
+                            <a href="#"><i class="fab fa-artstation"></i></a>
+                            <a href="#"><i class="fab fa-instagram"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="team-card reveal hover-target tilt-card" style="transition-delay: 0.2s;">
+                    <img src="Profile.jpg" class="team-img">
+                    <div class="team-info">
+                        <div class="team-name">Rishiraj</div>
+                        <div class="team-role">Lyricist & Vocalist</div>
+                        <div class="team-socials">
+                            <a href="#"><i class="fab fa-spotify"></i></a>
+                            <a href="#"><i class="fab fa-youtube"></i></a>
+                        </div>
+                    </div>
+                    <div class="team-card reveal hover-target tilt-card" style="transition-delay: 0.2s;">
+                    <img src="Profile.jpg" class="team-img">
+                    <div class="team-info">
+                        <div class="team-name">Nayina Sharma</div>
+                        <div class="team-role">Editor & Audio Engineer</div>
+                        <div class="team-socials">
+                            <a href="#"><i class="fab fa-spotify"></i></a>
+                            <a href="#"><i class="fab fa-youtube"></i></a>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sponsors Marquee -->
+        <section id="sponsors">
+            <div class="sponsor-marquee">
+                <div class="sponsor-track">
+                    <div class="sponsor-logo">PIONEER DJ</div><div class="sponsor-logo">ABLETON</div>
+                    <div class="sponsor-logo">ROLAND</div><div class="sponsor-logo">AUDIO-TECHNICA</div>
+                    <div class="sponsor-logo">SPITFIRE</div><div class="sponsor-logo">FL STUDIO</div>
+                    <div class="sponsor-logo">PIONEER DJ</div><div class="sponsor-logo">ABLETON</div>
+                    <div class="sponsor-logo">ROLAND</div><div class="sponsor-logo">AUDIO-TECHNICA</div>
+                    <div class="sponsor-logo">SPITFIRE</div><div class="sponsor-logo">FL STUDIO</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact -->
+        <section id="contact" class="container">
+            <h2 class="section-title reveal">Connect</h2>
+            <div class="contact-wrapper reveal">
+                <div class="contact-info">
+                    <h3>Join the Wave</h3>
+                    <p>Looking for a specific edit? Want to collaborate on a release? Drop us a transmission and our team will tune in.</p>
+                    <div class="social-links">
+                        <a href="#" class="social-link hover-target"><i class="fab fa-discord"></i></a>
+                        <a href="#" class="social-link hover-target"><i class="fab fa-youtube"></i></a>
+                        <a href="#" class="social-link hover-target"><i class="fab fa-spotify"></i></a>
+                        <a href="#" class="social-link hover-target"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                <div class="contact-form">
+                    <form onsubmit="event.preventDefault();">
+                        <div class="form-group">
+                            <input type="text" class="form-input hover-target" required id="name">
+                            <label for="name" class="form-label">Alias / Name</label>
+                        </div>
+                        <div class="form-group">
+                            <input type="email" class="form-input hover-target" required id="email">
+                            <label for="email" class="form-label">Transmission Email</label>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" class="form-input hover-target" required id="message">
+                            <label for="message" class="form-label">Your Message</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary hover-target" style="width: 100%;">Send Transmission</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-bg-text">8WAVES</div>
+        <div class="footer-content">
+            <div class="footer-logo">8waves</div>
+            <div class="footer-links">
+                <a href="#" class="hover-target">Press Kit</a>
+                <a href="#" class="hover-target">Licensing</a>
+                <a href="#" class="hover-target">Privacy Policy</a>
+                <a href="#" class="hover-target">Terms of Service</a>
+            </div>
+            <div class="copyright">
+                &copy; 2024 8waves Records. All frequencies reserved. Turning Sound Into Atmosphere.
+            </div>
+        </div>
+    </footer>
+
+    <!-- JS Logic -->
+    <script>
+        // =========================================================
+        // --- DYNAMIC ARTIST DATABASE SYSTEM (EDITABLE HERE) ------
+        // =========================================================
+        
+        // 1. The full list of Artists with their detailed profiles
+        const artistsDB = {
+            "Arjun Mehta": {
+                name: "Arjun Mehta",
+                role: "Main Artist",
+                listeners: "3.2M",
+                plays: "45M",
+                bio: "Arjun Mehta creates soulful, cinematic vocal performances that anchor the atmospheric tracks of 8waves. His tone is perfect for slowed + reverb transitions.",
+                image: "Profile.jpg",
+                verified: true,
+                socials: { instagram: "#", spotify: "#", youtube: "#" }
+            },
+            "Navya Sharma": {
+                name: "Navya Sharma",
+                role: "Main Artist",
+                listeners: "1.8M",
+                plays: "20M",
+                bio: "Known for ethereal melodies, Navya's voice brings a hauntingly beautiful dynamic to any dark lofi production.",
+                image: "Profile.jpg",
+                verified: true,
+                socials: { instagram: "#", spotify: "#" }
+            },
+            "Udit Goswami": {
+                name: "Udit Goswami",
+                role: "Founder & Producer, Guitarist and Songwriter",
+                listeners: "4.5M",
+                plays: "60M",
+                bio: "Master architect of heavy basslines and intricate beats. Udit transforms ordinary vocals into massive atmospheric anthems.",
+                image: "Udit.png",
+                verified: true,
+                socials: { soundcloud: "#", instagram: "#" }
+            },
+            "Rishiraj": {
+                name: "Rishiraj",
+                role: "Lyricist",
+                listeners: "850K",
+                plays: "12M",
+                bio: "Specialist in the art of Slowed + Reverb. Rishiraj alters the frequency and pitch to create nostalgic emotional spaces.",
+                image: "Profile.jpg",
+                verified: false,
+                socials: { youtube: "#", twitter: "#" }
+            },
+            
+            "Elena V": {
+                name: "Elena V",
+                role: "Visual Designer",
+                listeners: "-",
+                plays: "100M+ Views",
+                bio: "3D artist creating the looping surreal visuals and animated covers that define the 8waves aesthetic.",
+                image: "Elena.png",
+                verified: true,
+                socials: { artstation: "#", instagram: "#" }
+            },
+            "Nayina Sharma": {
+                name: "Nayina Sharma",
+                role: "Editor & Audio Engineer",
+                listeners: "2.1M",
+                plays: "30M",
+                bio: "Leading the ambient and synthwave division, Nayina crafts expansive instrumental soundscapes.",
+                image: "Profile.jpg",
+                verified: true,
+                socials: { spotify: "#", soundcloud: "#" }
+            }
+        };
+
+        // 2. Map specific tracks to their contributors (Linked by Data-Title)
+        const trackContributors = {
+            "Khamosh Raatein": {
+                "Main Artist": "Arjun Mehta",
+                "Featuring": "Navya Sharma",
+                "Producer": "Udit Goswami",
+                "Lyrics": "Rishiraj",
+                "Visual Designer": "Elena V",
+                "Editor & Audio Engineer": "Nayina Sharma"
+            },
+            "Tum Aur Mein": {
+                "Main Artist": "Vivaan Verma",
+                "Producer": "Udit Goswami",
+                "Lyrics": "Rishiraj",
+                "Visual Designer": "Elena V",
+                "Editor & Audio Engineer": "Nayina Sharma"
+            },
+            "Dono Taraf Se Sach Mohabbat": {
+                "Main Artist": "Abhishek Malwa",
+                "Producer": "Udit Goswami",
+                "Lyrics": "Rishiraj",
+                "Visual Designer": "Elena V",
+                "Editor & Audio Engineer": "Nayina Sharma"
+            },
+            
+        };
+
+        // --- 1. Loader ---
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loader = document.getElementById('loader');
+                loader.style.opacity = '0';
+                setTimeout(() => { loader.style.visibility = 'hidden'; }, 1000);
+            }, 1000); 
+        });
+
+        // --- 2. Custom Cursor ---
+        const cursorDot = document.getElementById('cursor-dot');
+        const cursorOutline = document.getElementById('cursor-outline');
+        
+        window.addEventListener('mousemove', (e) => {
+            const posX = e.clientX; const posY = e.clientY;
+            cursorDot.style.left = `${posX}px`; cursorDot.style.top = `${posY}px`;
+            cursorOutline.animate({ left: `${posX}px`, top: `${posY}px` }, { duration: 500, fill: "forwards" });
+        });
+
+        const setupHoverTargets = () => {
+            const hoverTargets = document.querySelectorAll('.hover-target, a, button, input, select');
+            hoverTargets.forEach(target => {
+                target.removeEventListener('mouseenter', addHoverClass);
+                target.removeEventListener('mouseleave', removeHoverClass);
+                target.addEventListener('mouseenter', addHoverClass);
+                target.addEventListener('mouseleave', removeHoverClass);
+            });
+        };
+        const addHoverClass = () => document.body.classList.add('cursor-hover');
+        const removeHoverClass = () => document.body.classList.remove('cursor-hover');
+        setupHoverTargets();
+
+        // --- 3. Navbar Scroll & Mobile Menu ---
+        const navbar = document.getElementById('navbar');
+        const mobileMenuBtn = document.getElementById('mobile-menu');
+        const navLinks = document.getElementById('nav-links');
+
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.style.padding = '10px 50px';
+                navbar.style.background = 'rgba(255, 255, 255, 0.85)';
+                navbar.style.boxShadow = '0 5px 15px rgba(0,0,0,0.05)';
+            } else {
+                navbar.style.padding = '20px 50px';
+                navbar.style.background = 'rgba(255, 255, 255, 0.5)';
+                navbar.style.boxShadow = 'none';
+            }
+        });
+
+        mobileMenuBtn.addEventListener('click', () => navLinks.classList.toggle('active'));
+
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) { navLinks.classList.remove('active'); }
+            });
+        });
+
+        // --- 4. Scroll Reveal Animations ---
+        const revealElements = document.querySelectorAll('.reveal');
+        const revealObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    observer.unobserve(entry.target); 
+                }
+            });
+        }, { threshold: 0.15 });
+        revealElements.forEach(el => revealObserver.observe(el));
+
+        // --- 5. Animated Stats Counter ---
+        const statNums = document.querySelectorAll('.stat-num');
+        let statsAnimated = false;
+        const statObserver = new IntersectionObserver((entries) => {
+            if(entries[0].isIntersecting && !statsAnimated) {
+                statsAnimated = true;
+                statNums.forEach(stat => {
+                    const target = +stat.getAttribute('data-target');
+                    const increment = target / 100;
+                    let current = 0;
+                    const updateCount = () => {
+                        current += increment;
+                        if(current < target) {
+                            stat.innerText = Math.ceil(current);
+                            requestAnimationFrame(updateCount);
+                        } else { stat.innerText = target; }
+                    };
+                    updateCount();
+                });
+            }
+        }, { threshold: 0.5 });
+        const statsSection = document.getElementById('stats');
+        if(statsSection) statObserver.observe(statsSection);
+
+        // --- 6. 3D Tilt Effect ---
+        const tiltCards = document.querySelectorAll('.tilt-card');
+        tiltCards.forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+                const centerX = rect.width / 2; const centerY = rect.height / 2;
+                const rotateX = ((y - centerY) / centerY) * -10; 
+                const rotateY = ((x - centerX) / centerX) * 10;
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+                card.style.transition = 'transform 0.5s ease';
+                setTimeout(() => card.style.transition = 'transform 0.1s ease', 500);
+            });
+        });
+
+        // --- 7. Fake Live Listener Fluctuation ---
+        const listenerCount = document.getElementById('live-listeners');
+        let currentListeners = 1432;
+        setInterval(() => {
+            const change = Math.floor(Math.random() * 16) - 5; 
+            currentListeners += change;
+            if(currentListeners < 1000) currentListeners = 1000; 
+            listenerCount.innerText = currentListeners.toLocaleString();
+        }, 3000);
+
+        // --- 8. LIKE BUTTON ANIMATION LOGIC ---
+        function setupLikeButton(btnId, countId) {
+            const btn = document.getElementById(btnId);
+            const countSpan = document.getElementById(countId);
+            if(!btn || !countSpan) return;
+            btn.addEventListener('click', () => {
+                let currentCount = parseInt(countSpan.innerText.replace(/,/g, ''));
+                if (btn.classList.contains('liked')) {
+                    btn.classList.remove('liked');
+                    countSpan.innerText = (currentCount - 1).toLocaleString();
+                } else {
+                    btn.classList.add('liked');
+                    countSpan.innerText = (currentCount + 1).toLocaleString();
+                }
+            });
+        }
+        setupLikeButton('audio-like-btn', 'audio-modal-likes');
+
+        // --- 10. DYNAMIC AUDIO PLAYER LOGIC ---
+        const audioModal = document.getElementById('audio-modal');
+        const closeAudioBtn = document.getElementById('close-audio-btn');
+        const dynamicAudioPlayer = document.getElementById('dynamic-audio-player');
+        
+        // Modal UI Elements
+        const audModalTitle = document.getElementById('audio-modal-title');
+        const audModalViews = document.getElementById('audio-modal-views');
+        const audModalLikes = document.getElementById('audio-modal-likes');
+        const audModalCover = document.getElementById('audio-modal-cover');
+        const audLikeBtn = document.getElementById('audio-like-btn');
+        
+        // Contributor Elements
+        const npcContainer = document.getElementById('now-playing-contributors');
+        const npcList = document.getElementById('npc-list-container');
+        const openTrackArtistsBtn = document.getElementById('open-track-artists-btn');
+        const closeNpcBtn = document.getElementById('close-npc-btn');
+
+        openTrackArtistsBtn.addEventListener('click', () => {
+            npcContainer.style.display = npcContainer.style.display === 'block' ? 'none' : 'block';
+        });
+
+        closeNpcBtn.addEventListener('click', () => {
+            npcContainer.style.display = 'none';
+        });
+
+        const handleAudioPlay = (e) => {
+            e.preventDefault();
+            const trigger = e.currentTarget;
+            const trackTitle = trigger.getAttribute('data-title') || "Unknown Track";
+
+            // Set data
+            audModalTitle.innerText = trackTitle;
+            audModalViews.innerText = trigger.getAttribute('data-views') || "0";
+            audModalLikes.innerText = trigger.getAttribute('data-likes') || "0";
+            audModalCover.src = trigger.getAttribute('data-cover') || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=400&auto=format&fit=crop";
+            audLikeBtn.classList.remove('liked');
+            
+            // Close the artists popup by default when opening a new track
+            npcContainer.style.display = 'none';
+
+            // --- ADVANCED FEATURE INJECTION: Populating Contributors ---
+            npcList.innerHTML = '';
+            if(trackContributors[trackTitle]) {
+                const contributors = trackContributors[trackTitle];
+                for (const [role, name] of Object.entries(contributors)) {
+                    // Assign icon based on role
+                    let icon = 'fa-user';
+                    if(role.includes('Producer') || role.includes('Engineer')) icon = 'fa-sliders-h';
+                    if(role.includes('Visual')) icon = 'fa-paint-brush';
+                    if(role.includes('Editor')) icon = 'fa-cut';
+                    if(role.includes('Artist') || role.includes('Featuring')) icon = 'fa-microphone';
+
+                    npcList.innerHTML += `
+                        <div class="npc-item">
+                            <i class="fas ${icon}"></i>
+                            <span class="npc-role">${role}</span>
+                            <span>${name}</span>
+                            ${artistsDB[name] && artistsDB[name].verified ? '<i class="fas fa-check-circle" style="color:var(--secondary); font-size:0.7rem; width:auto; margin-left:2px;"></i>' : ''}
+                        </div>
+                    `;
+                }
+            } else {
+                npcList.innerHTML = `<div class="npc-item"><span style="color:var(--text-muted);">No artist data available.</span></div>`;
+            }
+
+            const audioSrc = trigger.getAttribute('data-audio');
+            if (audioSrc) {
+                dynamicAudioPlayer.src = audioSrc;
+                audioModal.classList.add('show');
+                dynamicAudioPlayer.play();
+            }
+        };
+
+        const closeAudioPlayer = () => {
+            audioModal.classList.remove('show');
+            setTimeout(() => { dynamicAudioPlayer.pause(); dynamicAudioPlayer.src = ""; }, 300);
+        };
+
+        closeAudioBtn.addEventListener('click', closeAudioPlayer);
+        audioModal.addEventListener('click', (e) => { if (e.target === audioModal) closeAudioPlayer(); });
+
+        // Attach Media Event Listeners dynamically
+        const attachMediaTriggers = () => {
+            document.querySelectorAll('.audio-play-trigger').forEach(trigger => {
+                trigger.removeEventListener('click', handleAudioPlay); 
+                trigger.addEventListener('click', handleAudioPlay);
+            });
+        };
+        attachMediaTriggers(); 
+
+        // --- 11. FULL SCREEN LIBRARY MODALS ---
+        const allAudioModal = document.getElementById('all-audio-modal');
+        const openAudioLibBtn = document.getElementById('open-audio-lib');
+
+        openAudioLibBtn.addEventListener('click', () => { allAudioModal.classList.add('show'); document.body.style.overflow = 'hidden'; });
+
+        document.getElementById('close-audio-lib-btn').addEventListener('click', () => { allAudioModal.classList.remove('show'); document.body.style.overflow = 'auto'; });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === "Escape") {
+                if(audioModal.classList.contains('show')) {
+                    if (npcContainer.style.display === 'block') {
+                        npcContainer.style.display = 'none';
+                    } else {
+                        closeAudioPlayer();
+                    }
+                } else if(artistsModal.classList.contains('show')) {
+                    if(artistDetailView.classList.contains('show')) {
+                        closeArtistDetail();
+                    } else {
+                        artistsModal.classList.remove('show');
+                        document.body.style.overflow = 'auto';
+                    }
+                } else {
+                    allAudioModal.classList.remove('show');
+                    document.body.style.overflow = 'auto';
+                }
+            }
+        });
+
+        // --- 12. REAL-TIME SEARCH & LANGUAGE SORTING (AUDIO) ---
+        const audioSearchInput = document.getElementById('audio-search-input');
+        const audioLangFilter = document.getElementById('audio-lang-filter');
+        const audioLibraryGrid = document.getElementById('audio-lib-grid');
+
+        function filterAudioLibrary() {
+            const searchTerm = audioSearchInput.value.toLowerCase();
+            const selectedLang = audioLangFilter.value;
+            const cards = audioLibraryGrid.querySelectorAll('.release-card');
+
+            cards.forEach(card => {
+                const title = card.querySelector('.release-title').innerText.toLowerCase();
+                const lang = card.getAttribute('data-lang');
+                
+                const matchesSearch = title.includes(searchTerm);
+                const matchesLang = (selectedLang === 'all' || lang === selectedLang);
+
+                if (matchesSearch && matchesLang) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        audioSearchInput.addEventListener('input', filterAudioLibrary);
+        audioLangFilter.addEventListener('change', filterAudioLibrary);
+
+
+        // ======================================================
+        // --- ADVANCED PREMIUM ARTISTS MODAL ENGINE ------------
+        // ======================================================
+        const openArtistsBtn = document.getElementById('open-artists-btn');
+        const closeArtistsBtn = document.getElementById('close-artists-btn');
+        const artistsModal = document.getElementById('artists-modal');
+        const artistsLibGrid = document.getElementById('artists-lib-grid');
+        
+        const artistGridView = document.getElementById('artist-grid-view');
+        const artistDetailView = document.getElementById('artist-detail-view');
+        const artistBackBtn = document.getElementById('artist-back-btn');
+
+        // Render Artists Grid
+        function renderArtistsGrid() {
+            artistsLibGrid.innerHTML = '';
+            for(const [key, artist] of Object.entries(artistsDB)) {
+                const verifiedHtml = artist.verified ? '<i class="fas fa-check-circle verified-badge"></i>' : '';
+                const card = document.createElement('div');
+                card.className = 'artist-card-pro hover-target';
+                card.setAttribute('data-name', artist.name.toLowerCase());
+                card.setAttribute('data-role', artist.role);
+                
+                card.innerHTML = `
+                    <img src="${artist.image}" alt="${artist.name}" class="artist-img-circle">
+                    <div class="artist-name-pro">${artist.name} ${verifiedHtml}</div>
+                    <div class="artist-role-pro">${artist.role}</div>
+                    <div class="artist-stats-pro"><i class="fas fa-headphones"></i> ${artist.listeners} Listeners</div>
+                `;
+                
+                card.addEventListener('click', () => showArtistDetail(key));
+                artistsLibGrid.appendChild(card);
+            }
+            setupHoverTargets();
+        }
+
+        // Show detailed artist banner
+        function showArtistDetail(artistKey) {
+            const artist = artistsDB[artistKey];
+            if(!artist) return;
+
+            document.getElementById('ad-banner-bg').style.backgroundImage = `url('${artist.image}')`;
+            document.getElementById('ad-image').src = artist.image;
+            document.getElementById('ad-name').innerText = artist.name;
+            document.getElementById('ad-verified').style.display = artist.verified ? 'inline' : 'none';
+            document.getElementById('ad-listeners').innerText = artist.listeners;
+            document.getElementById('ad-role').innerText = artist.role;
+            document.getElementById('ad-bio').innerText = artist.bio;
+
+            // Generate Social Links
+            const socialsContainer = document.getElementById('ad-socials');
+            socialsContainer.innerHTML = '';
+            for(const [platform, link] of Object.entries(artist.socials)) {
+                socialsContainer.innerHTML += `<a href="${link}" class="hover-target" target="_blank"><i class="fab fa-${platform}"></i></a>`;
+            }
+
+            // Generate Top Tracks based on trackContributors mapping
+            const topTracksContainer = document.getElementById('ad-top-tracks');
+            topTracksContainer.innerHTML = '';
+            let tracksFound = 0;
+            for(const [track, contributors] of Object.entries(trackContributors)) {
+                if(Object.values(contributors).includes(artist.name)) {
+                    // Find role for this track
+                    let roleOnTrack = Object.keys(contributors).find(key => contributors[key] === artist.name);
+                    topTracksContainer.innerHTML += `
+                        <div class="npc-item" style="padding:10px; background:rgba(255,255,255,0.05); border-radius:10px;">
+                            <i class="fas fa-music" style="color:var(--primary);"></i>
+                            <span class="npc-role" style="color:var(--secondary);">${roleOnTrack}</span>
+                            <span style="color:#fff;">${track}</span>
+                        </div>
+                    `;
+                    tracksFound++;
+                }
+            }
+            if(tracksFound === 0) topTracksContainer.innerHTML = '<div class="npc-item"><span style="color:rgba(255,255,255,0.5);">No linked tracks available.</span></div>';
+
+            // Transition UI
+            artistGridView.style.display = 'none';
+            artistDetailView.classList.add('show');
+            artistsModal.scrollTo({ top: 0, behavior: 'smooth' });
+            setupHoverTargets();
+        }
+
+        function closeArtistDetail() {
+            artistDetailView.classList.remove('show');
+            setTimeout(() => {
+                artistGridView.style.display = 'block';
+            }, 300);
+        }
+
+        // Open/Close logic for Artists Modal
+        openArtistsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            renderArtistsGrid();
+            artistGridView.style.display = 'block';
+            artistDetailView.classList.remove('show');
+            artistsModal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+            if(window.innerWidth <= 768) { navLinks.classList.remove('active'); }
+        });
+
+        closeArtistsBtn.addEventListener('click', () => {
+            artistsModal.classList.remove('show');
+            document.body.style.overflow = 'auto';
+        });
+
+        artistBackBtn.addEventListener('click', closeArtistDetail);
+
+        // Search & Filter Artists
+        const artistSearchInput = document.getElementById('artist-search-input');
+        const artistRoleFilter = document.getElementById('artist-role-filter');
+
+        function filterArtists() {
+            const searchTerm = artistSearchInput.value.toLowerCase();
+            const selectedRole = artistRoleFilter.value;
+            const cards = artistsLibGrid.querySelectorAll('.artist-card-pro');
+
+            cards.forEach(card => {
+                const name = card.getAttribute('data-name');
+                const role = card.getAttribute('data-role');
+                
+                const matchesSearch = name.includes(searchTerm);
+                const matchesRole = (selectedRole === 'all' || role === selectedRole);
+
+                card.style.display = (matchesSearch && matchesRole) ? 'block' : 'none';
+            });
+        }
+        artistSearchInput.addEventListener('input', filterArtists);
+        artistRoleFilter.addEventListener('change', filterArtists);
+
+        // --- 14. Canvas Particle Network ---
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particlesArray = [];
+        let mouse = { x: null, y: null, radius: 150 };
+
+        window.addEventListener('mousemove', function(event) { mouse.x = event.x; mouse.y = event.y; });
+        window.addEventListener('mouseout', function() { mouse.x = undefined; mouse.y = undefined; });
+
+        class Particle {
+            constructor(x, y, directionX, directionY, size, color) {
+                this.x = x; this.y = y; this.directionX = directionX; this.directionY = directionY;
+                this.size = size; this.color = color;
+            }
+            draw() {
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+                ctx.fillStyle = this.color; ctx.fill();
+            }
+            update() {
+                if (this.x > canvas.width || this.x < 0) this.directionX = -this.directionX;
+                if (this.y > canvas.height || this.y < 0) this.directionY = -this.directionY;
+                
+                let dx = mouse.x - this.x; let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx*dx + dy*dy);
+                if (distance < mouse.radius) {
+                    const forceDirectionX = dx / distance; const forceDirectionY = dy / distance;
+                    const force = (mouse.radius - distance) / mouse.radius;
+                    const directionX = forceDirectionX * force * 5; const directionY = forceDirectionY * force * 5;
+                    if (this.x < canvas.width && this.x > 0) this.x -= directionX;
+                    if (this.y < canvas.height && this.y > 0) this.y -= directionY;
+                }
+                this.x += this.directionX; this.y += this.directionY;
+                this.draw();
+            }
+        }
+
+        function initParticles() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            particlesArray = [];
+            let numberOfParticles = (canvas.height * canvas.width) / 12000;
+            
+            for (let i = 0; i < numberOfParticles; i++) {
+                let size = (Math.random() * 2) + 1;
+                let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
+                let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
+                let directionX = (Math.random() * 1.5) - 0.75;
+                let directionY = (Math.random() * 1.5) - 0.75;
+                let color = 'rgba(157, 0, 255, 0.4)'; 
+                
+                particlesArray.push(new Particle(x, y, directionX, directionY, size, color));
+            }
+        }
+
+        function animateParticles() {
+            requestAnimationFrame(animateParticles);
+            ctx.clearRect(0,0,innerWidth, innerHeight);
+            for (let i = 0; i < particlesArray.length; i++) { particlesArray[i].update(); }
+            connectParticles();
+        }
+
+        function connectParticles() {
+            let opacityValue = 1;
+            for (let a = 0; a < particlesArray.length; a++) {
+                for (let b = a; b < particlesArray.length; b++) {
+                    let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x)) + 
+                                   ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y));
+                    if (distance < (canvas.width/7) * (canvas.height/7)) {
+                        opacityValue = 1 - (distance/20000);
+                        ctx.strokeStyle = `rgba(0, 210, 255, ${opacityValue * 0.2})`; 
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                        ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        window.addEventListener('resize', function(){ canvas.width = innerWidth; canvas.height = innerHeight; initParticles(); });
+        initParticles(); animateParticles();
+
+    </script>
+</body>
+</html>
