@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -458,7 +459,7 @@
             font-family: var(--font-display); font-size: clamp(2rem, 6vw, 4.5rem); line-height: 1; margin-bottom: 10px;
             text-shadow: 0 10px 20px rgba(0,0,0,0.8);
         }
-        .artist-banner-meta { display: flex; gap: 20px; font-size: clamp(0.8rem, 2vw, 1rem); color: rgba(255,255,255,0.8); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; flex-wrap: wrap; }
+        .artist-banner-meta { display: flex; gap: 20px; align-items: center; font-size: clamp(0.8rem, 2vw, 1rem); color: rgba(255,255,255,0.8); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; flex-wrap: wrap; }
         .verified-large { color: var(--secondary); margin-right: 5px; }
         
         .artist-body { padding: 40px 50px; max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr; gap: 50px; width: 100%; }
@@ -530,6 +531,18 @@
             .contact-info, .contact-form { padding: 30px 20px; }
             .about-visual { height: auto; margin-bottom: 30px; }
         }
+
+        /* --- ADDED: FOLLOW BUTTON STYLES --- */
+        .follow-btn {
+            padding: 8px 25px; border-radius: 30px;
+            background: transparent; border: 1px solid var(--secondary);
+            color: #fff; font-family: var(--font-heading); font-size: 0.8rem; font-weight: 600;
+            cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px;
+            position: relative; z-index: 5; margin-left: 10px;
+        }
+        .follow-btn:hover { background: rgba(0, 210, 255, 0.1); box-shadow: var(--glow-blue); transform: translateY(-2px); }
+        .follow-btn.following { background: var(--primary); border-color: var(--primary); color: white; box-shadow: var(--glow-purple); }
+        .follower-count { display: block; margin-top: 8px; color: rgba(255,255,255,0.7); font-size: 0.85rem; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -662,10 +675,14 @@
                     <img id="ad-image" src="" alt="Artist" class="artist-banner-img">
                     <div class="artist-banner-info">
                         <h1 id="ad-name">Artist Name</h1>
+                        <!-- HERE: FOLLOW BUTTON AND FOLLOWERS ADDED TO DETAIL BANNER -->
                         <div class="artist-banner-meta">
                             <span id="ad-verified"><i class="fas fa-check-circle verified-large"></i> Verified Artist</span>
-                            <span><span id="ad-listeners">0</span> Monthly Listeners</span>
+                            <span><i class="fas fa-headphones"></i> <span id="ad-listeners">0</span> Monthly Listeners</span>
+                            <span><i class="fas fa-users"></i> <span id="ad-followers">0</span> Followers</span>
                             <span style="color: var(--primary);" id="ad-role">Role</span>
+                            
+                            <button id="ad-follow-btn" class="follow-btn hover-target">Follow</button>
                         </div>
                     </div>
                 </div>
@@ -903,7 +920,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- FIXED BUG: Properly closed the previous div and opened the next one -->
                 <div class="team-card reveal hover-target tilt-card" style="transition-delay: 0.2s;">
                     <img src="Profile.jpg" class="team-img">
                     <div class="team-info">
@@ -997,9 +1013,11 @@
                 role: "Main Artist",
                 listeners: "3.2M",
                 plays: "45M",
+                followers: "1.1M",
                 bio: "Arjun Mehta creates soulful, cinematic vocal performances that anchor the atmospheric tracks of 8waves. His tone is perfect for slowed + reverb transitions.",
                 image: "Profile.jpg",
                 verified: true,
+                isFollowing: false,
                 socials: { instagram: "#", spotify: "#", youtube: "#" }
             },
             "Navya Sharma": {
@@ -1007,9 +1025,11 @@
                 role: "Main Artist",
                 listeners: "1.8M",
                 plays: "20M",
+                followers: "600K",
                 bio: "Known for ethereal melodies, Navya's voice brings a hauntingly beautiful dynamic to any dark lofi production.",
                 image: "Profile.jpg",
                 verified: true,
+                isFollowing: false,
                 socials: { instagram: "#", spotify: "#" }
             },
             "Udit Goswami": {
@@ -1017,9 +1037,11 @@
                 role: "Producer & Founder / Guitarist & Songwriter",
                 listeners: "4.5M",
                 plays: "60M",
+                followers: "2.3M",
                 bio: "The visionary founder of 8Wavess Musix, blending cinematic production, soulful songwriting, and powerful guitar artistry into emotionally immersive musical worlds.",
                 image: "Udit.png",
                 verified: true,
+                isFollowing: false,
                 socials: { soundcloud: "#", instagram: "#" }
             },
             "Rishiraj": {
@@ -1027,9 +1049,11 @@
                 role: "Lyricist",
                 listeners: "850K",
                 plays: "12M",
+                followers: "300K",
                 bio: "A poetic lyricist crafting deeply expressive verses that transform emotions into unforgettable melodies and stories.",
                 image: "Profile.jpg",
                 verified: false,
+                isFollowing: false,
                 socials: { youtube: "#", twitter: "#" }
             },
             
@@ -1038,9 +1062,11 @@
                 role: "Visual Designer",
                 listeners: "-",
                 plays: "100M+ Views",
+                followers: "150K",
                 bio: "A futuristic visual designer shaping the artistic identity of 8Wavess Musix through stunning aesthetics, immersive visuals, and creative direction.",
                 image: "Elena.png",
                 verified: true,
+                isFollowing: false,
                 socials: { artstation: "#", instagram: "#" }
             },
             "Nayina Sharma": {
@@ -1048,9 +1074,11 @@
                 role: "Editor & Audio Engineer",
                 listeners: "2.1M",
                 plays: "30M",
+                followers: "800K",
                 bio: "A precision-driven editor and audio engineer refining every sound, vocal, and detail into a polished sonic experience.",
                 image: "Profile.jpg",
                 verified: true,
+                isFollowing: false,
                 socials: { spotify: "#", soundcloud: "#" }
             }
         };
@@ -1392,6 +1420,9 @@
             artistsLibGrid.innerHTML = '';
             for(const [key, artist] of Object.entries(artistsDB)) {
                 const verifiedHtml = artist.verified ? '<i class="fas fa-check-circle verified-badge"></i>' : '';
+                const isFollowing = artist.isFollowing ? 'following' : '';
+                const followText = artist.isFollowing ? 'Following' : 'Follow';
+                
                 const card = document.createElement('div');
                 card.className = 'artist-card-pro hover-target';
                 card.setAttribute('data-name', artist.name.toLowerCase());
@@ -1401,7 +1432,9 @@
                     <img src="${artist.image}" alt="${artist.name}" class="artist-img-circle">
                     <div class="artist-name-pro">${artist.name} ${verifiedHtml}</div>
                     <div class="artist-role-pro">${artist.role}</div>
-                    <div class="artist-stats-pro"><i class="fas fa-headphones"></i> ${artist.listeners} Listeners</div>
+                    <div class="artist-stats-pro">
+                        <i class="fas fa-headphones"></i> ${artist.listeners} Listeners
+                    </div>
                 `;
                 
                 card.addEventListener('click', () => showArtistDetail(key));
@@ -1420,8 +1453,40 @@
             document.getElementById('ad-name').innerText = artist.name;
             document.getElementById('ad-verified').style.display = artist.verified ? 'inline' : 'none';
             document.getElementById('ad-listeners').innerText = artist.listeners;
+            document.getElementById('ad-followers').innerText = artist.followers || "0";
             document.getElementById('ad-role').innerText = artist.role;
             document.getElementById('ad-bio').innerText = artist.bio;
+
+            // Handle Detail View Follow Button Logic
+            const detailFollowBtn = document.getElementById('ad-follow-btn');
+            
+            // Clean up old event listener by replacing the node entirely to prevent multi-firing
+            const newBtn = detailFollowBtn.cloneNode(true);
+            detailFollowBtn.parentNode.replaceChild(newBtn, detailFollowBtn);
+            
+            // Set initial state
+            if(artist.isFollowing) {
+                newBtn.classList.add('following');
+                newBtn.innerText = 'Following';
+            } else {
+                newBtn.classList.remove('following');
+                newBtn.innerText = 'Follow';
+            }
+
+            // Click Logic
+            newBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                artist.isFollowing = !artist.isFollowing; // Toggle global state
+                if(artist.isFollowing) {
+                    newBtn.classList.add('following');
+                    newBtn.innerText = 'Following';
+                } else {
+                    newBtn.classList.remove('following');
+                    newBtn.innerText = 'Follow';
+                }
+                // Update grid behind the scenes so the state holds if you close
+                renderArtistsGrid();
+            });
 
             // Generate Social Links
             const socialsContainer = document.getElementById('ad-socials');
